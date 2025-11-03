@@ -1,0 +1,310 @@
+.walletConnect {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--card-bg);
+  border-radius: 1rem;
+}
+
+.card h2 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.error {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-color);
+  border-radius: 0.5rem;
+  color: var(--danger-color);
+}
+
+.connectSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.description {
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 1rem 0;
+}
+
+.connectButton {
+  padding: 1rem 2rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  width: 100%;
+  max-width: 300px;
+  transition: background 0.2s;
+}
+
+.connectButton:hover {
+  background: var(--primary-hover);
+}
+
+.walletList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem 0;
+}
+
+.walletButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: var(--card-bg);
+  border: 2px solid var(--border-color);
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.walletButton:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-color-rgb, 64, 128, 255), 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.walletButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.walletIcon {
+  font-size: 1.5rem;
+  width: 2rem;
+  text-align: center;
+}
+
+.walletName {
+  flex: 1;
+  text-align: left;
+}
+
+.buttonSpinner {
+  animation: spin 1s linear infinite;
+  color: var(--primary-color);
+  font-size: 1rem;
+}
+
+.noWallets {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.noWallets .hint {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.allWallets {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.sectionTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.walletGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.walletItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.walletItem .walletIcon {
+  font-size: 2rem;
+}
+
+.walletItem .walletName {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.installedBadge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--success-color);
+  border-radius: 1rem;
+  font-weight: 600;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.downloadButton:hover {
+  background: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+.notAvailable {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(128, 128, 128, 0.1);
+  color: var(--text-secondary);
+  border-radius: 1rem;
+}
+
+.genericWalletNote {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(64, 128, 255, 0.1);
+  border: 1px solid var(--primary-color);
+  border-radius: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: var(--primary-color);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.connectedSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.success {
+  padding: 1rem 2rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--success-color);
+  border-radius: 0.5rem;
+  color: var(--success-color);
+  font-weight: 600;
+  text-align: center;
+}
+
+.disconnectButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: 2px solid var(--danger-color);
+  color: var(--danger-color);
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.disconnectButton:hover {
+  background: var(--danger-color);
+  color: white;
+}
+
+.infoCard {
+  padding: 1.5rem;
+  background: var(--bg-color);
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+}
+
+.infoCard h3 {
+  margin-bottom: 1rem;
+  color: var(--primary-color);
+}
+
+.infoCard ul {
+  list-style: none;
+  padding: 0;
+}
+
+.infoCard li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: var(--text-secondary);
+}
+
+.infoCard li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .card {
+    padding: 1.5rem;
+  }
+
+  .card h2 {
+    font-size: 1.25rem;
+  }
+}
+

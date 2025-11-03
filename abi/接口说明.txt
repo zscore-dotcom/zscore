@@ -1,0 +1,69 @@
+manager private-key:0x4833926c11d531867dfc40054216631828256d1fb298d0d3f66ff3b2b0c7788f
+
+/** ================================写方法================================================*/
+// @notice 只有owner可以触发该函数方法
+// @dev 添加节点
+function addNode(
+        NodeType nodeType,  //节点类型(0是小节点，1是大节点)
+        address addr  //将要添加为节点的地址
+) external onlyOwner;
+
+// @notice 只有owner可以触发该函数方法
+// @dev 删除节点
+function delNode(
+        NodeType nodeType, //节点类型(0是小节点，1是大节点)
+        uint8 index  //索引要删除的节点在数组里的位置
+) external onlyOwner;
+
+// @notice 只有manager可以触发该函数方法
+// @dev 从底池pair里面拿出收益
+function lpShareZSInLp() external onlyManager;
+
+// @notice 只有manager可以触发该函数方法
+// @dev manager账户操作该方法进行token的分发操作
+function distribute(
+        uint8 size,   //每次想要执行的最大承载地址数，例如想要最大发给100个人，就传100
+        uint32 bigIndex, //总的lp持有人除以size可以得到需要分发的最大次数，从0开始
+        uint32 count  //全部分发完后的累加器，从0开始，全部分发给lp用户后+1
+) external onlyManager;
+
+// @notice 只有manager可以触发该函数方法（token余额必须>0才可以触发成功）
+// @dev 将ZS地址多余的其它token清理到清理池里面（BNB则传零地址）
+function skim(address token) external onlyManager;
+
+/**=================================读方法============================================*/
+// @notice 需要除以10 ** 8
+// @dev 得到当前zs对USDT的价格
+// @return 返回Bignumbner的价格
+function getPrice() public view returns (uint256 zs_USDT_Price);
+
+// @dev 得到待提取的lp的zs数量和销毁数量，以及几次没有触发过
+// @return 返回Bignumbner的价格
+function getLpShareAndBurnInfo() public view returns (
+    uint256 shareAmount,  //收益数量
+    uint256 burnAmount,  //销毁数量
+    uint256 count //累计几次没有触发
+) 
+
+// @dev 根据传入的token地址和地址账户，得到这个地址对应的token余额
+// @return 返回Bignumbner的余额
+function getTokenBalance(
+    address token,  //ERC20 token地址或者零地址（BNB）
+    address account  //地址
+) public view returns (uint256 userTokenBalance);
+
+// @dev 索引存放在lp数组里的用户地址
+// @return 返回用户地址（没有则为零地址）
+function indexLpUser(
+    uint256 index   //索引值
+) external view returns (address);
+
+// @dev得到节点类型对应的数组的总人数
+// @return 返回Bignumbner的节点数
+function getNodeLength(
+    NodeType thisType   //节点类型(0是小节点，1是大节点)
+) public view returns (uint256);
+
+// @dev得到总的lp人数
+// @return 返回Bignumbner的lp总人数
+function getlpGroupLength() public view returns (uint256);
