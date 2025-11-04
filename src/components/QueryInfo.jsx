@@ -8,6 +8,8 @@ function QueryInfo({ contracts }) {
   const [smallNodeLength, setSmallNodeLength] = useState('')
   const [bigNodeLength, setBigNodeLength] = useState('')
   const [lpLength, setLpLength] = useState('')
+  const [shareAmount, setShareAmount] = useState('')
+  const [burnAmount, setBurnAmount] = useState('')
 
   const fetchData = async () => {
     if (!contracts) return
@@ -16,7 +18,7 @@ function QueryInfo({ contracts }) {
     try {
       // 查询价格
       const priceResult = await contracts.zsCore.methods.getPrice().call()
-      setPrice((Number(priceResult) / 1e16).toFixed(6))
+      setPrice((Number(priceResult) / 1e8).toFixed(6))
 
       // 查询节点数量
       const smallNodes = await contracts.zsCore.methods.getNodeLength(0).call()
@@ -24,9 +26,20 @@ function QueryInfo({ contracts }) {
       setSmallNodeLength(smallNodes.toString())
       setBigNodeLength(bigNodes.toString())
 
-      // 查询LP数量
+      // 查询LP用户数量
       const lpCount = await contracts.zsCore.methods.getlpGroupLength().call()
       setLpLength(lpCount.toString())
+
+      // 查询LP分红和销毁信息
+      const lpShareInfo = await contracts.zsCore.methods.getLpShareAndBurnInfo().call()
+      // Web3.js 可能返回对象或数组，兼容两种格式
+      const share = lpShareInfo.shareAmount || lpShareInfo[0] || '0'
+      const burn = lpShareInfo.burnAmount || lpShareInfo[1] || '0'
+      // Token数量需要除以10^18转换为可读格式
+      const shareFormatted = (Number(share) / 1e18).toFixed(6)
+      const burnFormatted = (Number(burn) / 1e18).toFixed(6)
+      setShareAmount(shareFormatted)
+      setBurnAmount(burnFormatted)
     } catch (error) {
       console.error('查询失败:', error)
     } finally {
@@ -76,6 +89,20 @@ function QueryInfo({ contracts }) {
           <div className={styles.label}>LP总人数</div>
           <div className={styles.value}>
             {lpLength || '-'}
+          </div>
+        </div>
+
+        <div className={styles.infoItem}>
+          <div className={styles.label}>大LP收益数量</div>
+          <div className={styles.value}>
+            {shareAmount ? Number(shareAmount).toLocaleString('zh-CN') : '-'}
+          </div>
+        </div>
+
+        <div className={styles.infoItem}>
+          <div className={styles.label}>大LP销毁数量</div>
+          <div className={styles.value}>
+            {burnAmount ? Number(burnAmount).toLocaleString('zh-CN') : '-'}
           </div>
         </div>
       </div>
