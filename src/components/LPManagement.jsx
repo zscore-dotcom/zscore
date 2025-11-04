@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { AiOutlineDollarCircle as CoinsIcon, AiOutlineExport as ExternalIcon } from 'react-icons/ai'
 import CustomSelect from './CustomSelect'
 import styles from './LPManagement.module.css'
@@ -9,6 +9,7 @@ function LPManagement({ wallet, contracts }) {
   const [tokenAddress, setTokenAddress] = useState('')
   const [tokenType, setTokenType] = useState('address') // 'address' or 'zero'
   const [account, setAccount] = useState('')
+  const [lastEarnTime, setLastEarnTime] = useState('')
 
   useEffect(() => {
     const getAccount = async () => {
@@ -21,6 +22,71 @@ function LPManagement({ wallet, contracts }) {
     }
     getAccount()
   }, [wallet])
+
+  // 获取最后收益时间戳并转换为北京时间的函数
+  const fetchLastEarnTimestamp = useCallback(async () => {
+    console.log('[最后收益时间] === 开始获取最后收益时间 ===')
+    console.log('[最后收益时间] - contracts存在:', !!contracts)
+    console.log('[最后收益时间] - zsCore存在:', !!contracts?.zsCore)
+    
+    if (!contracts?.zsCore) {
+      console.log('[最后收益时间] ⚠️ 合约未就绪，清空时间显示')
+      setLastEarnTime('')
+      return
+    }
+
+    try {
+      const timestamp = await contracts.zsCore.methods.lastestEarnTimestamp().call()
+      console.log('[最后收益时间] 原始时间戳:', timestamp, '类型:', typeof timestamp)
+      const timestampNum = Number(timestamp)
+      console.log('[最后收益时间] 转换后的时间戳:', timestampNum)
+      
+      if (timestampNum === 0) {
+        console.log('[最后收益时间] 时间戳为0，显示"暂无记录"')
+        setLastEarnTime('暂无记录')
+        console.log('[最后收益时间] === 获取结束（无记录）===')
+        return
+      }
+
+      // 转换为北京时间 (UTC+8)
+      // 时间戳是秒级，需要乘以1000转换为毫秒
+      const date = new Date(timestampNum * 1000)
+      console.log('[最后收益时间] 创建的Date对象:', date)
+      
+      // 使用 toLocaleString 转换为北京时间，精确到秒
+      const beijingTime = date.toLocaleString('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      })
+      console.log('[最后收益时间] 转换后的北京时间:', beijingTime)
+      console.log('[最后收益时间] ✅ 获取成功')
+      console.log('[最后收益时间] === 获取结束（成功）===')
+
+      setLastEarnTime(beijingTime)
+    } catch (error) {
+      console.error('[最后收益时间] ❌ 获取失败:', error)
+      console.error('[最后收益时间] - 错误类型:', error.constructor.name)
+      console.error('[最后收益时间] - 错误消息:', error.message)
+      console.error('[最后收益时间] - 完整错误对象:', error)
+      console.log('[最后收益时间] === 获取结束（失败）===')
+      setLastEarnTime('获取失败')
+    }
+  }, [contracts])
+
+  // 获取最后收益时间戳并转换为北京时间
+  useEffect(() => {
+    fetchLastEarnTimestamp()
+    // 每隔30秒刷新一次
+    const interval = setInterval(fetchLastEarnTimestamp, 30000)
+    
+    return () => clearInterval(interval)
+  }, [fetchLastEarnTimestamp])
 
   const handleLPShareZSInLp = async () => {
     console.log('=== [LP分红提取] 开始执行 ===')
@@ -62,6 +128,9 @@ function LPManagement({ wallet, contracts }) {
       
       setMessage('⏳ 交易已提交，等待确认...')
       setMessage(`✅ LP分红提取成功！交易哈希: ${tx.transactionHash.slice(0, 10)}...`)
+      
+      // 刷新最后收益时间
+      await fetchLastEarnTimestamp()
       
       console.log('[LP分红提取] ✅ 操作成功完成')
     } catch (error) {
@@ -175,6 +244,9 @@ function LPManagement({ wallet, contracts }) {
     <div className={styles.lpManagement}>
       <h2>💰 LP分红管理</h2>
       <p className={styles.subtitle}>仅 Manager 可以执行LP相关操作</p>
+      {lastEarnTime && (
+        <p className={styles.timeInfo}>最后收益时间（北京时间）: {lastEarnTime}</p>
+      )}
 
       {message && (
         <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success}>
