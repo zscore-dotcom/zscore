@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AiOutlineDollarCircle as CoinsIcon, AiOutlineExport as ExternalIcon } from 'react-icons/ai'
+import CustomSelect from './CustomSelect'
 import styles from './LPManagement.module.css'
 
 function LPManagement({ wallet, contracts }) {
@@ -210,16 +211,18 @@ function LPManagement({ wallet, contracts }) {
           <form onSubmit={handleSkim} className={styles.form}>
             <div className={styles.formGroup}>
               <label>Token类型</label>
-              <select 
-                value={tokenType} 
-                onChange={(e) => {
-                  setTokenType(e.target.value)
+              <CustomSelect
+                value={tokenType}
+                onChange={(value) => {
+                  setTokenType(value)
                   setTokenAddress('')
                 }}
-              >
-                <option value="zero">BNB</option>
-                <option value="address">ERC20 Token</option>
-              </select>
+                options={[
+                  { value: 'zero', label: 'BNB' },
+                  { value: 'address', label: 'ERC20 Token' }
+                ]}
+                placeholder="请选择Token类型"
+              />
             </div>
             
             {tokenType === 'address' && (

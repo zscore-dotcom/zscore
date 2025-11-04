@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { AiOutlinePlus, AiOutlineDelete, AiOutlineExclamationCircle as AlertCircle } from 'react-icons/ai'
+import CustomSelect from './CustomSelect'
 import styles from './NodeManagement.module.css'
 
 function NodeManagement({ wallet, contracts }) {
-  const [nodeType, setNodeType] = useState('0')
+  const [addNodeType, setAddNodeType] = useState('0')  // 添加节点的类型
+  const [delNodeType, setDelNodeType] = useState('0')  // 删除节点的类型
   const [nodeAddress, setNodeAddress] = useState('')
   const [nodeIndex, setNodeIndex] = useState('')
   const [loading, setLoading] = useState(false)
@@ -39,7 +41,7 @@ function NodeManagement({ wallet, contracts }) {
     
     console.log('[添加节点] ✅ 前置条件检查通过')
     console.log('[添加节点] 2. 验证输入参数...')
-    console.log('[添加节点] - nodeType (原始):', nodeType, typeof nodeType)
+    console.log('[添加节点] - nodeType (原始):', addNodeType, typeof addNodeType)
     console.log('[添加节点] - nodeAddress (原始):', nodeAddress)
 
     if (!nodeAddress || !/^0x[a-fA-F0-9]{40}$/.test(nodeAddress)) {
@@ -50,7 +52,7 @@ function NodeManagement({ wallet, contracts }) {
     
     console.log('[添加节点] ✅ 地址格式验证通过')
     
-    const nodeTypeNum = parseInt(nodeType)
+    const nodeTypeNum = parseInt(addNodeType)
     console.log('[添加节点] 3. 参数转换和准备...')
     console.log('[添加节点] - nodeType (转换后):', nodeTypeNum, typeof nodeTypeNum)
     console.log('[添加节点] - nodeAddress:', nodeAddress)
@@ -120,7 +122,7 @@ function NodeManagement({ wallet, contracts }) {
     
     console.log('[删除节点] ✅ 前置条件检查通过')
     console.log('[删除节点] 2. 验证输入参数...')
-    console.log('[删除节点] - nodeType (原始):', nodeType, typeof nodeType)
+    console.log('[删除节点] - nodeType (原始):', delNodeType, typeof delNodeType)
     console.log('[删除节点] - nodeIndex (原始):', nodeIndex, typeof nodeIndex)
 
     if (!nodeIndex || isNaN(nodeIndex) || parseInt(nodeIndex) < 0) {
@@ -129,7 +131,7 @@ function NodeManagement({ wallet, contracts }) {
       return
     }
     
-    const nodeTypeNum = parseInt(nodeType)
+    const nodeTypeNum = parseInt(delNodeType)
     const nodeIndexNum = parseInt(nodeIndex)
     
     console.log('[删除节点] 3. 检查索引是否在有效范围内...')
@@ -235,10 +237,15 @@ function NodeManagement({ wallet, contracts }) {
           <form onSubmit={handleAddNode} className={styles.form}>
             <div className={styles.formGroup}>
               <label>节点类型</label>
-              <select value={nodeType} onChange={(e) => setNodeType(e.target.value)}>
-                <option value="0">小节点</option>
-                <option value="1">大节点</option>
-              </select>
+              <CustomSelect
+                value={addNodeType}
+                onChange={(value) => setAddNodeType(value)}
+                options={[
+                  { value: '0', label: '小节点' },
+                  { value: '1', label: '大节点' }
+                ]}
+                placeholder="请选择节点类型"
+              />
             </div>
             
             <div className={styles.formGroup}>
@@ -266,10 +273,15 @@ function NodeManagement({ wallet, contracts }) {
           <form onSubmit={handleDelNode} className={styles.form}>
             <div className={styles.formGroup}>
               <label>节点类型</label>
-              <select value={nodeType} onChange={(e) => setNodeType(e.target.value)}>
-                <option value="0">小节点</option>
-                <option value="1">大节点</option>
-              </select>
+              <CustomSelect
+                value={delNodeType}
+                onChange={(value) => setDelNodeType(value)}
+                options={[
+                  { value: '0', label: '小节点' },
+                  { value: '1', label: '大节点' }
+                ]}
+                placeholder="请选择节点类型"
+              />
             </div>
             
             <div className={styles.formGroup}>
