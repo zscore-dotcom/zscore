@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { AiOutlineSend } from 'react-icons/ai'
+import { useState, useEffect, useRef } from 'react'
+import { AiOutlineSend, AiOutlineClose } from 'react-icons/ai'
 import styles from './Distribute.module.css'
 
 function Distribute({ wallet, contracts }) {
@@ -11,6 +11,9 @@ function Distribute({ wallet, contracts }) {
   const [account, setAccount] = useState('')
   const [lpTotal, setLpTotal] = useState(null)
   const [maxBigIndex, setMaxBigIndex] = useState(null)
+  const [txHash, setTxHash] = useState('')
+  const [contractAddress, setContractAddress] = useState('')
+  const successTimerRef = useRef(null)
 
   useEffect(() => {
     const getAccount = async () => {
@@ -52,6 +55,26 @@ function Distribute({ wallet, contracts }) {
     }
     fetchLpTotal()
   }, [contracts, size])
+
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+    }
+  }, [])
+
+  // 手动关闭成功消息
+  const handleCloseSuccess = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    setMessage('')
+    setTxHash('')
+    setContractAddress('')
+  }
 
   const handleDistribute = async (e) => {
     e.preventDefault()
@@ -175,6 +198,13 @@ function Distribute({ wallet, contracts }) {
 
     setLoading(true)
     setMessage('')
+    // 清除之前的自动清除定时器
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    setTxHash('')
+    setContractAddress('')
 
     try {
       console.log('[Token分发] 7. 构建交易方法...')
@@ -197,8 +227,24 @@ function Distribute({ wallet, contracts }) {
       console.log('[Token分发] - Gas使用量:', tx.gasUsed)
       console.log('[Token分发] - 完整交易对象:', tx)
       
-      setMessage('⏳ 交易已提交，等待确认...')
-      setMessage(`✅ 分发成功！交易哈希: ${tx.transactionHash.slice(0, 10)}...`)
+      // 获取合约地址
+      const contractAddr = contracts.zsCore.options.address
+      setContractAddress(contractAddr)
+      setTxHash(tx.transactionHash)
+      
+      // 使用特殊标记表示成功，将在渲染时显示详细信息
+      setMessage('success')
+      
+      // 10秒后自动清除成功消息
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+      successTimerRef.current = setTimeout(() => {
+        setMessage('')
+        setTxHash('')
+        setContractAddress('')
+        successTimerRef.current = null
+      }, 10000) // 10秒
       
       console.log('[Token分发] ✅ 操作成功完成')
       
@@ -220,6 +266,13 @@ function Distribute({ wallet, contracts }) {
         console.error('[Token分发] - 错误原因:', error.reason)
       }
       
+      // 清除交易信息和定时器
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      setTxHash('')
+      setContractAddress('')
       setMessage(`❌ 分发失败: ${error.message || '未知错误'}`)
     } finally {
       setLoading(false)
@@ -233,8 +286,60 @@ function Distribute({ wallet, contracts }) {
       <p className={styles.subtitle}>仅 Manager 可以执行分发操作</p>
 
       {message && (
-        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success}>
-          {message}
+        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success} style={{ position: 'relative' }}>
+          {message === 'success' && txHash ? (
+            <div>
+              <button
+                onClick={handleCloseSuccess}
+                style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '1'}
+                onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                aria-label="关闭"
+              >
+                <AiOutlineClose size={18} />
+              </button>
+              <div style={{ marginBottom: '0.75rem', paddingRight: '2rem' }}>
+                ✅ <strong>分发成功！</strong>
+              </div>
+              <div style={{ fontSize: '0.9rem', paddingRight: '2rem' }}>
+                <strong>交易哈希：</strong>
+                <a
+                  href={`https://bscscan.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#1890ff',
+                    textDecoration: 'underline',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  {txHash}
+                </a>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                  (点击查看)
+                </span>
+              </div>
+            </div>
+          ) : (
+            message
+          )}
         </div>
       )}
 

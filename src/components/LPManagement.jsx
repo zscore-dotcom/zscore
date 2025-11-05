@@ -5,38 +5,28 @@ import styles from './LPManagement.module.css'
 
 // 安全的JSON序列化函数，处理BigInt类型、循环引用和不可序列化的属性
 const safeStringify = (obj, space = 2) => {
-  try {
-    const seen = new WeakSet()
-    return JSON.stringify(obj, (key, value) => {
-      try {
-        // 处理 BigInt
-        if (typeof value === 'bigint') {
-          return value.toString()
-        }
-        // 处理循环引用
-        if (typeof value === 'object' && value !== null) {
-          if (seen.has(value)) {
-            return '[Circular]'
-          }
-          seen.add(value)
-        }
-        // 处理 undefined、函数等不可序列化的值
-        if (typeof value === 'function') {
-          return '[Function]'
-        }
-        if (value === undefined) {
-          return '[Undefined]'
-        }
-        return value
-      } catch (e) {
-        // 如果 replacer 内部出错（例如访问 getter 时返回 BigInt），返回错误信息
-        return `[Replacer Error: ${String(e)}]`
+  const seen = new WeakSet()
+  return JSON.stringify(obj, (key, value) => {
+    // 处理 BigInt
+    if (typeof value === 'bigint') {
+      return value.toString()
+    }
+    // 处理循环引用
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) {
+        return '[Circular]'
       }
-    }, space || 2)
-  } catch (e) {
-    // 如果整个序列化过程失败，返回错误信息
-    return `[Stringify Error: ${String(e)}]`
-  }
+      seen.add(value)
+    }
+    // 处理 undefined、函数等不可序列化的值
+    if (typeof value === 'function') {
+      return '[Function]'
+    }
+    if (value === undefined) {
+      return '[Undefined]'
+    }
+    return value
+  }, space || 2)
 }
 
 function LPManagement({ wallet, contracts }) {
@@ -47,7 +37,8 @@ function LPManagement({ wallet, contracts }) {
   const [account, setAccount] = useState('')
   const [lastEarnTime, setLastEarnTime] = useState('')
   const [txHash, setTxHash] = useState('')
-  const txHashTimerRef = useRef(null)
+  const [contractAddress, setContractAddress] = useState('')
+  const successTimerRef = useRef(null)
 
   useEffect(() => {
     const getAccount = async () => {
@@ -134,39 +125,26 @@ function LPManagement({ wallet, contracts }) {
     return () => clearInterval(interval)
   }, [fetchLastEarnTimestamp])
 
-  // 自动清除交易哈希（15秒后）
+  // 组件卸载时清除定时器
   useEffect(() => {
-    // 清除之前的定时器
-    if (txHashTimerRef.current) {
-      clearTimeout(txHashTimerRef.current)
-      txHashTimerRef.current = null
-    }
-
-    // 如果有交易哈希，设置15秒后自动清除
-    if (txHash) {
-      txHashTimerRef.current = setTimeout(() => {
-        setTxHash('')
-        txHashTimerRef.current = null
-      }, 15000) // 15秒
-    }
-
-    // 清理函数：组件卸载或txHash变化时清除定时器
     return () => {
-      if (txHashTimerRef.current) {
-        clearTimeout(txHashTimerRef.current)
-        txHashTimerRef.current = null
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
       }
     }
-  }, [txHash])
+  }, [])
 
-  // 手动清除交易哈希
-  const handleCloseTxHash = () => {
-    if (txHashTimerRef.current) {
-      clearTimeout(txHashTimerRef.current)
-      txHashTimerRef.current = null
+  // 手动关闭成功消息
+  const handleCloseSuccess = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
     }
+    setMessage('')
     setTxHash('')
+    setContractAddress('')
   }
+
 
   const handleLPShareZSInLp = async () => {
     console.log('=== [LP分红提取] 开始执行 ===')
@@ -223,15 +201,17 @@ function LPManagement({ wallet, contracts }) {
     console.log('[LP分红提取] - 调用账户 (from):', account)
     console.log('[LP分红提取] - 方法名: lpShareZSInLp()')
     console.log('[LP分红提取] - 方法参数: 无参数')
+    setMessage('')
+    // 清除之前的自动清除定时器
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    // 清空之前的交易哈希
+    setTxHash('')
+    setContractAddress('')
 
     setLoading(true)
-    setMessage('')
-    // 清空之前的交易哈希和定时器
-    if (txHashTimerRef.current) {
-      clearTimeout(txHashTimerRef.current)
-      txHashTimerRef.current = null
-    }
-    setTxHash('')
 
     try {
       // 5. 构建交易方法
@@ -280,6 +260,15 @@ function LPManagement({ wallet, contracts }) {
       console.log('[LP分红提取] - 耗时:', duration, 'ms')
       console.log('[LP分红提取] - 完整交易对象:', safeStringify(tx))
       
+      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
+      const txStatus = tx.status === true || tx.status === 1
+      if (!txStatus) {
+        setLoading(false)
+        setMessage('❌ 提取失败：交易状态为失败')
+        console.error('[LP分红提取] ❌ 交易状态检查失败，状态值:', tx.status)
+        return
+      }
+      
       // 9. 获取交易详情
       console.log('[LP分红提取] 9. 获取交易详情...')
       try {
@@ -291,10 +280,23 @@ function LPManagement({ wallet, contracts }) {
         console.warn('[LP分红提取] ⚠️ 获取交易回执失败 (可能还未被打包):', receiptError.message)
       }
       
-      // 保存交易哈希（确保转换为字符串类型）
+      // 获取合约地址和交易哈希
+      const contractAddr = contracts.zsCore.options.address
       const hashString = String(tx.transactionHash || '')
+      setContractAddress(contractAddr)
       setTxHash(hashString)
-      setMessage('✅ LP分红提取成功！')
+      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 10秒后自动清除成功消息
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+      successTimerRef.current = setTimeout(() => {
+        setMessage('')
+        setTxHash('')
+        setContractAddress('')
+        successTimerRef.current = null
+      }, 10000) // 10秒
       
       // 10. 刷新最后收益时间
       console.log('[LP分红提取] 10. 刷新最后收益时间...')
@@ -320,6 +322,14 @@ function LPManagement({ wallet, contracts }) {
           error.message.includes('Transaction started at') ||
           error.message.includes('可能仍在等待挖出')
         ))
+      
+      // 清除交易信息和定时器
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      setTxHash('')
+      setContractAddress('')
       
       // 提取交易哈希（如果错误消息中包含）
       let txHash = null
@@ -415,26 +425,11 @@ function LPManagement({ wallet, contracts }) {
         }
       }
       
-      // 尝试输出完整错误对象（需要保护）
-      try {
-        console.error('[LP分红提取] - 完整错误对象:', safeStringify(error))
-      } catch (stringifyError) {
-        console.error('[LP分红提取] - 完整错误对象 (无法序列化):', {
-          message: error?.message,
-          name: error?.name,
-          stack: error?.stack
-        })
-      }
-      
-      if (error?.data) {
+            if (error.data) {
         if (typeof error.data === 'string') {
           console.error('[LP分红提取] - 错误数据 (字符串):', error.data)
         } else if (typeof error.data === 'object') {
-          try {
-            console.error('[LP分红提取] - 错误数据 (对象):', safeStringify(error.data))
-          } catch (stringifyError) {
-            console.error('[LP分红提取] - 错误数据 (无法序列化):', String(error.data))
-          }
+          console.error('[LP分红提取] - 错误数据 (对象):', safeStringify(error.data))
         } else {
           console.error('[LP分红提取] - 错误数据:', String(error.data))
         }
@@ -496,12 +491,14 @@ function LPManagement({ wallet, contracts }) {
 
     setLoading(true)
     setMessage('')
-    // 清空之前的交易哈希和定时器
-    if (txHashTimerRef.current) {
-      clearTimeout(txHashTimerRef.current)
-      txHashTimerRef.current = null
+    // 清除之前的自动清除定时器
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
     }
+    // 清空之前的交易哈希
     setTxHash('')
+    setContractAddress('')
 
     try {
       console.log('[清理Token] 4. 构建交易方法...')
@@ -517,12 +514,35 @@ function LPManagement({ wallet, contracts }) {
       console.log('[清理Token] - 交易哈希:', tx.transactionHash)
       console.log('[清理Token] - 区块号:', tx.blockNumber?.toString() || tx.blockNumber)
       console.log('[清理Token] - Gas使用量:', tx.gasUsed?.toString() || tx.gasUsed)
+      console.log('[清理Token] - 交易状态:', tx.status)
       console.log('[清理Token] - 完整交易对象:', safeStringify(tx))
       
-      // 保存交易哈希（确保转换为字符串类型）
+      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
+      const txStatus = tx.status === true || tx.status === 1
+      if (!txStatus) {
+        setLoading(false)
+        setMessage('❌ 清理失败：交易状态为失败')
+        console.error('[清理Token] ❌ 交易状态检查失败，状态值:', tx.status)
+        return
+      }
+      
+      // 获取合约地址和交易哈希
+      const contractAddr = contracts.zsCore.options.address
       const hashString = String(tx.transactionHash || '')
+      setContractAddress(contractAddr)
       setTxHash(hashString)
-      setMessage(`✅ 清理成功！`)
+      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 10秒后自动清除成功消息
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+      successTimerRef.current = setTimeout(() => {
+        setMessage('')
+        setTxHash('')
+        setContractAddress('')
+        successTimerRef.current = null
+      }, 10000) // 10秒
       
       console.log('[清理Token] ✅ 操作成功完成')
       
@@ -542,6 +562,14 @@ function LPManagement({ wallet, contracts }) {
           stack: error?.stack
         })
       }
+      
+      // 清除交易信息和定时器
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      setTxHash('')
+      setContractAddress('')
       
       // 提取交易哈希（如果错误中包含）
       let txHashFromError = null
@@ -592,31 +620,60 @@ function LPManagement({ wallet, contracts }) {
       )}
 
       {message && (
-        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success}>
-          {message}
-        </div>
-      )}
-
-      {txHash && (
-        <div className={styles.txHashContainer}>
-          <div className={styles.txHashHeader}>
-            <div className={styles.txHashLabel}>交易哈希:</div>
-            <button 
-              onClick={handleCloseTxHash}
-              className={styles.closeButton}
-              aria-label="关闭"
-            >
-              <AiOutlineClose size={18} />
-            </button>
-          </div>
-          <a 
-            href={`https://bscscan.com/tx/${txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.txHashLink}
-          >
-            {txHash}
-          </a>
+        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success} style={{ position: 'relative' }}>
+          {message === 'success' && txHash ? (
+            <div>
+              <button
+                onClick={handleCloseSuccess}
+                style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '1'}
+                onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                aria-label="关闭"
+              >
+                <AiOutlineClose size={18} />
+              </button>
+              <div style={{ marginBottom: '0.75rem', paddingRight: '2rem' }}>
+                ✅ <strong>操作成功！</strong>
+              </div>
+              <div style={{ fontSize: '0.9rem', paddingRight: '2rem' }}>
+                <strong>交易哈希：</strong>
+                <a
+                  href={`https://bscscan.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#1890ff',
+                    textDecoration: 'underline',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  {txHash}
+                </a>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                  (点击查看)
+                </span>
+              </div>
+            </div>
+          ) : (
+            message
+          )}
         </div>
       )}
 
