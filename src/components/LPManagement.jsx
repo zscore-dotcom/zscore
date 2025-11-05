@@ -3,6 +3,42 @@ import { AiOutlineDollarCircle as CoinsIcon, AiOutlineExport as ExternalIcon, Ai
 import CustomSelect from './CustomSelect'
 import styles from './LPManagement.module.css'
 
+// 安全的JSON序列化函数，处理BigInt类型、循环引用和不可序列化的属性
+const safeStringify = (obj, space = 2) => {
+  try {
+    const seen = new WeakSet()
+    return JSON.stringify(obj, (key, value) => {
+      try {
+        // 处理 BigInt
+        if (typeof value === 'bigint') {
+          return value.toString()
+        }
+        // 处理循环引用
+        if (typeof value === 'object' && value !== null) {
+          if (seen.has(value)) {
+            return '[Circular]'
+          }
+          seen.add(value)
+        }
+        // 处理 undefined、函数等不可序列化的值
+        if (typeof value === 'function') {
+          return '[Function]'
+        }
+        if (value === undefined) {
+          return '[Undefined]'
+        }
+        return value
+      } catch (e) {
+        // 如果 replacer 内部出错（例如访问 getter 时返回 BigInt），返回错误信息
+        return `[Replacer Error: ${String(e)}]`
+      }
+    }, space || 2)
+  } catch (e) {
+    // 如果整个序列化过程失败，返回错误信息
+    return `[Stringify Error: ${String(e)}]`
+  }
+}
+
 function LPManagement({ wallet, contracts }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -72,10 +108,18 @@ function LPManagement({ wallet, contracts }) {
 
       setLastEarnTime(beijingTime)
     } catch (error) {
-      console.error('[最后收益时间] ❌ 获取失败:', error)
-      console.error('[最后收益时间] - 错误类型:', error.constructor.name)
-      console.error('[最后收益时间] - 错误消息:', error.message)
-      console.error('[最后收益时间] - 完整错误对象:', error)
+      console.error('[最后收益时间] ❌ 获取失败:', error?.message || String(error))
+      console.error('[最后收益时间] - 错误类型:', error?.constructor?.name || typeof error)
+      console.error('[最后收益时间] - 错误消息:', error?.message || '未知错误')
+      try {
+        console.error('[最后收益时间] - 完整错误对象:', safeStringify(error))
+      } catch (stringifyError) {
+        console.error('[最后收益时间] - 完整错误对象 (无法序列化):', {
+          message: error?.message,
+          name: error?.name,
+          stack: error?.stack
+        })
+      }
       console.log('[最后收益时间] === 获取结束（失败）===')
       setLastEarnTime('获取失败')
     }
@@ -171,7 +215,7 @@ function LPManagement({ wallet, contracts }) {
         console.warn('[LP分红提取] ⚠️ 账户余额可能不足以支付Gas费用')
       }
     } catch (error) {
-      console.error('[LP分红提取] ❌ 获取网络信息失败:', error)
+      console.error('[LP分红提取] ❌ 获取网络信息失败:', error?.message || String(error || '未知错误'))
     }
     
     // 4. 准备执行提取操作
@@ -228,21 +272,21 @@ function LPManagement({ wallet, contracts }) {
       console.log('[LP分红提取] 8. 交易已提交 ✅')
       console.log('[LP分红提取] - 交易哈希:', tx.transactionHash)
       console.log('[LP分红提取] - 完整交易哈希:', tx.transactionHash)
-      console.log('[LP分红提取] - 区块号:', tx.blockNumber)
-      console.log('[LP分红提取] - Gas使用量:', tx.gasUsed)
-      console.log('[LP分红提取] - Gas限制:', tx.gas)
-      console.log('[LP分红提取] - 交易索引:', tx.transactionIndex)
+      console.log('[LP分红提取] - 区块号:', tx.blockNumber?.toString() || tx.blockNumber)
+      console.log('[LP分红提取] - Gas使用量:', tx.gasUsed?.toString() || tx.gasUsed)
+      console.log('[LP分红提取] - Gas限制:', tx.gas?.toString() || tx.gas)
+      console.log('[LP分红提取] - 交易索引:', tx.transactionIndex?.toString() || tx.transactionIndex)
       console.log('[LP分红提取] - 交易状态:', tx.status)
       console.log('[LP分红提取] - 耗时:', duration, 'ms')
-      console.log('[LP分红提取] - 完整交易对象:', JSON.stringify(tx, null, 2))
+      console.log('[LP分红提取] - 完整交易对象:', safeStringify(tx))
       
       // 9. 获取交易详情
       console.log('[LP分红提取] 9. 获取交易详情...')
       try {
         const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
-        console.log('[LP分红提取] - 交易回执:', JSON.stringify(txReceipt, null, 2))
+        console.log('[LP分红提取] - 交易回执:', safeStringify(txReceipt))
         console.log('[LP分红提取] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
-        console.log('[LP分红提取] - 实际Gas使用:', txReceipt.gasUsed.toString())
+        console.log('[LP分红提取] - 实际Gas使用:', txReceipt.gasUsed?.toString() || String(txReceipt.gasUsed || ''))
       } catch (receiptError) {
         console.warn('[LP分红提取] ⚠️ 获取交易回执失败 (可能还未被打包):', receiptError.message)
       }
@@ -261,17 +305,17 @@ function LPManagement({ wallet, contracts }) {
     } catch (error) {
       console.error('[LP分红提取] ❌ 执行失败')
       console.error('[LP分红提取] - 错误发生时间:', new Date().toISOString())
-      console.error('[LP分红提取] - 错误类型:', error.constructor.name)
+      console.error('[LP分红提取] - 错误类型:', error?.constructor?.name || typeof error)
       
       // 转换错误消息为中文
-      let errorMessageZh = error.message || '未知错误'
+      let errorMessageZh = error?.message || '未知错误'
       let errorCodeZh = ''
       
       // 检查是否为交易超时错误
       const isTransactionTimeout = 
-        error.constructor.name === 'TransactionBlockTimeoutError' ||
-        error.code === 432 ||
-        (error.message && (
+        error?.constructor?.name === 'TransactionBlockTimeoutError' ||
+        error?.code === 432 ||
+        (error?.message && (
           error.message.includes('not mined within') ||
           error.message.includes('Transaction started at') ||
           error.message.includes('可能仍在等待挖出')
@@ -279,7 +323,7 @@ function LPManagement({ wallet, contracts }) {
       
       // 提取交易哈希（如果错误消息中包含）
       let txHash = null
-      if (error.message) {
+      if (error?.message) {
         const txHashMatch = error.message.match(/Transaction Hash:\s*([0-9a-fA-F]{66}|[0-9a-fA-F]{64})/i)
         if (txHashMatch) {
           txHash = String(txHashMatch[1]) // 确保转换为字符串
@@ -287,10 +331,10 @@ function LPManagement({ wallet, contracts }) {
       }
       
       // 如果错误对象中包含交易哈希，也提取出来
-      if (!txHash && error.transactionHash) {
+      if (!txHash && error?.transactionHash) {
         txHash = String(error.transactionHash)
       }
-      if (!txHash && error.receipt && error.receipt.transactionHash) {
+      if (!txHash && error?.receipt?.transactionHash) {
         txHash = String(error.receipt.transactionHash)
       }
       
@@ -307,7 +351,7 @@ function LPManagement({ wallet, contracts }) {
           errorMessageZh += ` 交易哈希: ${txHash.slice(0, 10)}...`
         }
         errorCodeZh = '交易确认超时（交易可能仍在处理中）'
-      } else if (error.message) {
+      } else if (error?.message) {
         if (error.message.includes('User denied transaction signature') || 
             error.message.includes('User rejected the request') ||
             error.message.includes('用户拒绝')) {
@@ -330,11 +374,11 @@ function LPManagement({ wallet, contracts }) {
         }
       }
       
-      console.error('[LP分红提取] - 错误消息 (英文):', error.message)
+      console.error('[LP分红提取] - 错误消息 (英文):', error?.message || '未知错误')
       console.error('[LP分红提取] - 错误消息 (中文):', errorMessageZh)
-      console.error('[LP分红提取] - 错误代码:', error.code)
+      console.error('[LP分红提取] - 错误代码:', error?.code)
       
-      if (error.code) {
+      if (error?.code) {
         console.error('[LP分红提取] - 错误代码说明:')
         switch (error.code) {
           case 4001:
@@ -371,16 +415,32 @@ function LPManagement({ wallet, contracts }) {
         }
       }
       
-      if (error.data) {
-        console.error('[LP分红提取] - 错误数据:', error.data)
+      // 尝试输出完整错误对象（需要保护）
+      try {
+        console.error('[LP分红提取] - 完整错误对象:', safeStringify(error))
+      } catch (stringifyError) {
+        console.error('[LP分红提取] - 完整错误对象 (无法序列化):', {
+          message: error?.message,
+          name: error?.name,
+          stack: error?.stack
+        })
+      }
+      
+      if (error?.data) {
         if (typeof error.data === 'string') {
           console.error('[LP分红提取] - 错误数据 (字符串):', error.data)
         } else if (typeof error.data === 'object') {
-          console.error('[LP分红提取] - 错误数据 (对象):', JSON.stringify(error.data, null, 2))
+          try {
+            console.error('[LP分红提取] - 错误数据 (对象):', safeStringify(error.data))
+          } catch (stringifyError) {
+            console.error('[LP分红提取] - 错误数据 (无法序列化):', String(error.data))
+          }
+        } else {
+          console.error('[LP分红提取] - 错误数据:', String(error.data))
         }
       }
-      if (error.reason) {
-        console.error('[LP分红提取] - 错误原因:', error.reason)
+      if (error?.reason) {
+        console.error('[LP分红提取] - 错误原因:', String(error.reason))
       }
       
       // 确定最终显示的错误信息（优先使用中文的错误代码说明，其次使用中文错误消息）
@@ -455,9 +515,9 @@ function LPManagement({ wallet, contracts }) {
       
       console.log('[清理Token] 6. 交易已提交')
       console.log('[清理Token] - 交易哈希:', tx.transactionHash)
-      console.log('[清理Token] - 区块号:', tx.blockNumber)
-      console.log('[清理Token] - Gas使用量:', tx.gasUsed)
-      console.log('[清理Token] - 完整交易对象:', tx)
+      console.log('[清理Token] - 区块号:', tx.blockNumber?.toString() || tx.blockNumber)
+      console.log('[清理Token] - Gas使用量:', tx.gasUsed?.toString() || tx.gasUsed)
+      console.log('[清理Token] - 完整交易对象:', safeStringify(tx))
       
       // 保存交易哈希（确保转换为字符串类型）
       const hashString = String(tx.transactionHash || '')
@@ -470,23 +530,31 @@ function LPManagement({ wallet, contracts }) {
       setTokenAddress('')
     } catch (error) {
       console.error('[清理Token] ❌ 执行失败')
-      console.error('[清理Token] - 错误类型:', error.constructor.name)
-      console.error('[清理Token] - 错误消息:', error.message)
-      console.error('[清理Token] - 错误代码:', error.code)
-      console.error('[清理Token] - 完整错误对象:', error)
+      console.error('[清理Token] - 错误类型:', error?.constructor?.name || typeof error)
+      console.error('[清理Token] - 错误消息:', error?.message || '未知错误')
+      console.error('[清理Token] - 错误代码:', error?.code)
+      try {
+        console.error('[清理Token] - 完整错误对象:', safeStringify(error))
+      } catch (stringifyError) {
+        console.error('[清理Token] - 完整错误对象 (无法序列化):', {
+          message: error?.message,
+          name: error?.name,
+          stack: error?.stack
+        })
+      }
       
       // 提取交易哈希（如果错误中包含）
       let txHashFromError = null
-      if (error.message) {
+      if (error?.message) {
         const txHashMatch = error.message.match(/Transaction Hash:\s*([0-9a-fA-F]{66}|[0-9a-fA-F]{64})/i)
         if (txHashMatch) {
           txHashFromError = String(txHashMatch[1]) // 确保转换为字符串
         }
       }
-      if (!txHashFromError && error.transactionHash) {
+      if (!txHashFromError && error?.transactionHash) {
         txHashFromError = String(error.transactionHash)
       }
-      if (!txHashFromError && error.receipt && error.receipt.transactionHash) {
+      if (!txHashFromError && error?.receipt?.transactionHash) {
         txHashFromError = String(error.receipt.transactionHash)
       }
       
@@ -495,14 +563,20 @@ function LPManagement({ wallet, contracts }) {
         setTxHash(txHashFromError)
       }
       
-      if (error.data) {
-        console.error('[清理Token] - 错误数据:', error.data)
+      if (error?.data) {
+        if (typeof error.data === 'string') {
+          console.error('[清理Token] - 错误数据 (字符串):', error.data)
+        } else if (typeof error.data === 'object') {
+          console.error('[清理Token] - 错误数据 (对象):', safeStringify(error.data))
+        } else {
+          console.error('[清理Token] - 错误数据:', String(error.data))
+        }
       }
-      if (error.reason) {
-        console.error('[清理Token] - 错误原因:', error.reason)
+      if (error?.reason) {
+        console.error('[清理Token] - 错误原因:', String(error.reason))
       }
       
-      setMessage(`❌ 清理失败: ${error.message || '未知错误'}`)
+      setMessage(`❌ 清理失败: ${error?.message || '未知错误'}`)
     } finally {
       setLoading(false)
       console.log('[清理Token] === 执行结束 ===')
