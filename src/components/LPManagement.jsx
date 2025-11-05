@@ -247,8 +247,9 @@ function LPManagement({ wallet, contracts }) {
         console.warn('[LP分红提取] ⚠️ 获取交易回执失败 (可能还未被打包):', receiptError.message)
       }
       
-      // 保存交易哈希
-      setTxHash(tx.transactionHash)
+      // 保存交易哈希（确保转换为字符串类型）
+      const hashString = String(tx.transactionHash || '')
+      setTxHash(hashString)
       setMessage('✅ LP分红提取成功！')
       
       // 10. 刷新最后收益时间
@@ -281,8 +282,21 @@ function LPManagement({ wallet, contracts }) {
       if (error.message) {
         const txHashMatch = error.message.match(/Transaction Hash:\s*([0-9a-fA-F]{66}|[0-9a-fA-F]{64})/i)
         if (txHashMatch) {
-          txHash = txHashMatch[1]
+          txHash = String(txHashMatch[1]) // 确保转换为字符串
         }
+      }
+      
+      // 如果错误对象中包含交易哈希，也提取出来
+      if (!txHash && error.transactionHash) {
+        txHash = String(error.transactionHash)
+      }
+      if (!txHash && error.receipt && error.receipt.transactionHash) {
+        txHash = String(error.receipt.transactionHash)
+      }
+      
+      // 如果提取到交易哈希，保存到 state 中
+      if (txHash) {
+        setTxHash(txHash)
       }
       
       // 根据错误类型、代码和消息转换为中文
@@ -445,8 +459,9 @@ function LPManagement({ wallet, contracts }) {
       console.log('[清理Token] - Gas使用量:', tx.gasUsed)
       console.log('[清理Token] - 完整交易对象:', tx)
       
-      // 保存交易哈希
-      setTxHash(tx.transactionHash)
+      // 保存交易哈希（确保转换为字符串类型）
+      const hashString = String(tx.transactionHash || '')
+      setTxHash(hashString)
       setMessage(`✅ 清理成功！`)
       
       console.log('[清理Token] ✅ 操作成功完成')
@@ -459,6 +474,26 @@ function LPManagement({ wallet, contracts }) {
       console.error('[清理Token] - 错误消息:', error.message)
       console.error('[清理Token] - 错误代码:', error.code)
       console.error('[清理Token] - 完整错误对象:', error)
+      
+      // 提取交易哈希（如果错误中包含）
+      let txHashFromError = null
+      if (error.message) {
+        const txHashMatch = error.message.match(/Transaction Hash:\s*([0-9a-fA-F]{66}|[0-9a-fA-F]{64})/i)
+        if (txHashMatch) {
+          txHashFromError = String(txHashMatch[1]) // 确保转换为字符串
+        }
+      }
+      if (!txHashFromError && error.transactionHash) {
+        txHashFromError = String(error.transactionHash)
+      }
+      if (!txHashFromError && error.receipt && error.receipt.transactionHash) {
+        txHashFromError = String(error.receipt.transactionHash)
+      }
+      
+      // 如果提取到交易哈希，保存到 state 中
+      if (txHashFromError) {
+        setTxHash(txHashFromError)
+      }
       
       if (error.data) {
         console.error('[清理Token] - 错误数据:', error.data)
