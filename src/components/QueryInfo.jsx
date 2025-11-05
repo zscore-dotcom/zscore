@@ -94,14 +94,14 @@ function QueryInfo({ contracts }) {
 
         <div className={styles.infoItem}>
           <div className={styles.label}>LP待收益数量</div>
-          <div className={styles.value}>
+          <div className={`${styles.value} ${styles.compactValue}`}>
             {shareAmount ? Number(shareAmount).toLocaleString('zh-CN') : '-'}
           </div>
         </div>
 
         <div className={styles.infoItem}>
           <div className={styles.label}>LP待销毁数量</div>
-          <div className={styles.value}>
+          <div className={`${styles.value} ${styles.compactValue}`}>
             {burnAmount ? Number(burnAmount).toLocaleString('zh-CN') : '-'}
           </div>
         </div>
