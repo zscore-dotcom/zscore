@@ -12,7 +12,6 @@ function Distribute({ wallet, contracts }) {
   const [lpTotal, setLpTotal] = useState(null)
   const [maxBigIndex, setMaxBigIndex] = useState(null)
   const [txHash, setTxHash] = useState('')
-  const [contractAddress, setContractAddress] = useState('')
   const successTimerRef = useRef(null)
 
   useEffect(() => {
@@ -73,7 +72,6 @@ function Distribute({ wallet, contracts }) {
     }
     setMessage('')
     setTxHash('')
-    setContractAddress('')
   }
 
   const handleDistribute = async (e) => {
@@ -204,7 +202,6 @@ function Distribute({ wallet, contracts }) {
       successTimerRef.current = null
     }
     setTxHash('')
-    setContractAddress('')
 
     try {
       console.log('[Token分发] 7. 构建交易方法...')
@@ -225,12 +222,21 @@ function Distribute({ wallet, contracts }) {
       console.log('[Token分发] - 交易哈希:', tx.transactionHash)
       console.log('[Token分发] - 区块号:', tx.blockNumber)
       console.log('[Token分发] - Gas使用量:', tx.gasUsed)
+      console.log('[Token分发] - 交易状态:', tx.status)
       console.log('[Token分发] - 完整交易对象:', tx)
       
-      // 获取合约地址
-      const contractAddr = contracts.zsCore.options.address
-      setContractAddress(contractAddr)
-      setTxHash(tx.transactionHash)
+      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
+      const txStatus = tx.status === true || tx.status === 1
+      if (!txStatus) {
+        setLoading(false)
+        setMessage('❌ 分发失败：交易状态为失败')
+        console.error('[Token分发] ❌ 交易状态检查失败，状态值:', tx.status)
+        return
+      }
+      
+      // 获取交易哈希
+      const hashString = String(tx.transactionHash || '')
+      setTxHash(hashString)
       
       // 使用特殊标记表示成功，将在渲染时显示详细信息
       setMessage('success')
@@ -242,7 +248,6 @@ function Distribute({ wallet, contracts }) {
       successTimerRef.current = setTimeout(() => {
         setMessage('')
         setTxHash('')
-        setContractAddress('')
         successTimerRef.current = null
       }, 10000) // 10秒
       
@@ -272,7 +277,6 @@ function Distribute({ wallet, contracts }) {
         successTimerRef.current = null
       }
       setTxHash('')
-      setContractAddress('')
       setMessage(`❌ 分发失败: ${error.message || '未知错误'}`)
     } finally {
       setLoading(false)

@@ -37,7 +37,6 @@ function LPManagement({ wallet, contracts }) {
   const [account, setAccount] = useState('')
   const [lastEarnTime, setLastEarnTime] = useState('')
   const [txHash, setTxHash] = useState('')
-  const [contractAddress, setContractAddress] = useState('')
   const successTimerRef = useRef(null)
 
   useEffect(() => {
@@ -142,7 +141,6 @@ function LPManagement({ wallet, contracts }) {
     }
     setMessage('')
     setTxHash('')
-    setContractAddress('')
   }
 
 
@@ -209,7 +207,6 @@ function LPManagement({ wallet, contracts }) {
     }
     // 清空之前的交易哈希
     setTxHash('')
-    setContractAddress('')
 
     setLoading(true)
 
@@ -280,10 +277,8 @@ function LPManagement({ wallet, contracts }) {
         console.warn('[LP分红提取] ⚠️ 获取交易回执失败 (可能还未被打包):', receiptError.message)
       }
       
-      // 获取合约地址和交易哈希
-      const contractAddr = contracts.zsCore.options.address
+      // 获取交易哈希
       const hashString = String(tx.transactionHash || '')
-      setContractAddress(contractAddr)
       setTxHash(hashString)
       setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
       
@@ -294,7 +289,6 @@ function LPManagement({ wallet, contracts }) {
       successTimerRef.current = setTimeout(() => {
         setMessage('')
         setTxHash('')
-        setContractAddress('')
         successTimerRef.current = null
       }, 10000) // 10秒
       
@@ -329,7 +323,6 @@ function LPManagement({ wallet, contracts }) {
         successTimerRef.current = null
       }
       setTxHash('')
-      setContractAddress('')
       
       // 提取交易哈希（如果错误消息中包含）
       let txHash = null
@@ -498,7 +491,6 @@ function LPManagement({ wallet, contracts }) {
     }
     // 清空之前的交易哈希
     setTxHash('')
-    setContractAddress('')
 
     try {
       console.log('[清理Token] 4. 构建交易方法...')
@@ -526,10 +518,8 @@ function LPManagement({ wallet, contracts }) {
         return
       }
       
-      // 获取合约地址和交易哈希
-      const contractAddr = contracts.zsCore.options.address
+      // 获取交易哈希
       const hashString = String(tx.transactionHash || '')
-      setContractAddress(contractAddr)
       setTxHash(hashString)
       setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
       
@@ -540,7 +530,6 @@ function LPManagement({ wallet, contracts }) {
       successTimerRef.current = setTimeout(() => {
         setMessage('')
         setTxHash('')
-        setContractAddress('')
         successTimerRef.current = null
       }, 10000) // 10秒
       
@@ -569,7 +558,6 @@ function LPManagement({ wallet, contracts }) {
         successTimerRef.current = null
       }
       setTxHash('')
-      setContractAddress('')
       
       // 提取交易哈希（如果错误中包含）
       let txHashFromError = null

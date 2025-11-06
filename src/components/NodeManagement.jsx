@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { AiOutlinePlus, AiOutlineDelete, AiOutlineExclamationCircle as AlertCircle } from 'react-icons/ai'
+import { useState, useEffect, useRef } from 'react'
+import { AiOutlinePlus, AiOutlineDelete, AiOutlineExclamationCircle as AlertCircle, AiOutlineClose } from 'react-icons/ai'
 import CustomSelect from './CustomSelect'
 import styles from './NodeManagement.module.css'
 
@@ -11,6 +11,8 @@ function NodeManagement({ wallet, contracts }) {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [account, setAccount] = useState('')
+  const [txHash, setTxHash] = useState('')
+  const successTimerRef = useRef(null)
 
   useEffect(() => {
     const getAccount = async () => {
@@ -23,6 +25,25 @@ function NodeManagement({ wallet, contracts }) {
     }
     getAccount()
   }, [wallet])
+
+  // 组件卸载时清除定时器
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+    }
+  }, [])
+
+  // 手动关闭成功消息
+  const handleCloseSuccess = () => {
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    setMessage('')
+    setTxHash('')
+  }
 
   const handleAddNode = async (e) => {
     e.preventDefault()
@@ -60,6 +81,13 @@ function NodeManagement({ wallet, contracts }) {
 
     setLoading(true)
     setMessage('')
+    // 清除之前的自动清除定时器
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    // 清空之前的交易哈希
+    setTxHash('')
 
     try {
       console.log('[添加节点] 4. 构建交易方法...')
@@ -75,10 +103,32 @@ function NodeManagement({ wallet, contracts }) {
       console.log('[添加节点] - 交易哈希:', tx.transactionHash)
       console.log('[添加节点] - 区块号:', tx.blockNumber)
       console.log('[添加节点] - Gas使用量:', tx.gasUsed)
+      console.log('[添加节点] - 交易状态:', tx.status)
       console.log('[添加节点] - 完整交易对象:', tx)
       
-      setMessage('⏳ 交易已提交，等待确认...')
-      setMessage(`✅ 添加节点成功！交易哈希: ${tx.transactionHash.slice(0, 10)}...`)
+      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
+      const txStatus = tx.status === true || tx.status === 1
+      if (!txStatus) {
+        setLoading(false)
+        setMessage('❌ 添加失败：交易状态为失败')
+        console.error('[添加节点] ❌ 交易状态检查失败，状态值:', tx.status)
+        return
+      }
+      
+      // 获取交易哈希
+      const hashString = String(tx.transactionHash || '')
+      setTxHash(hashString)
+      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 10秒后自动清除成功消息
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+      successTimerRef.current = setTimeout(() => {
+        setMessage('')
+        setTxHash('')
+        successTimerRef.current = null
+      }, 10000) // 10秒
       
       console.log('[添加节点] ✅ 操作成功完成')
       
@@ -98,6 +148,12 @@ function NodeManagement({ wallet, contracts }) {
         console.error('[添加节点] - 错误原因:', error.reason)
       }
       
+      // 清除交易信息和定时器
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      setTxHash('')
       setMessage(`❌ 添加失败: ${error.message || '未知错误'}`)
     } finally {
       setLoading(false)
@@ -172,6 +228,13 @@ function NodeManagement({ wallet, contracts }) {
 
     setLoading(true)
     setMessage('')
+    // 清除之前的自动清除定时器
+    if (successTimerRef.current) {
+      clearTimeout(successTimerRef.current)
+      successTimerRef.current = null
+    }
+    // 清空之前的交易哈希
+    setTxHash('')
 
     try {
       console.log('[删除节点] 5. 构建交易方法...')
@@ -187,10 +250,32 @@ function NodeManagement({ wallet, contracts }) {
       console.log('[删除节点] - 交易哈希:', tx.transactionHash)
       console.log('[删除节点] - 区块号:', tx.blockNumber)
       console.log('[删除节点] - Gas使用量:', tx.gasUsed)
+      console.log('[删除节点] - 交易状态:', tx.status)
       console.log('[删除节点] - 完整交易对象:', tx)
       
-      setMessage('⏳ 交易已提交，等待确认...')
-      setMessage(`✅ 删除节点成功！交易哈希: ${tx.transactionHash.slice(0, 10)}...`)
+      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
+      const txStatus = tx.status === true || tx.status === 1
+      if (!txStatus) {
+        setLoading(false)
+        setMessage('❌ 删除失败：交易状态为失败')
+        console.error('[删除节点] ❌ 交易状态检查失败，状态值:', tx.status)
+        return
+      }
+      
+      // 获取交易哈希
+      const hashString = String(tx.transactionHash || '')
+      setTxHash(hashString)
+      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 10秒后自动清除成功消息
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+      }
+      successTimerRef.current = setTimeout(() => {
+        setMessage('')
+        setTxHash('')
+        successTimerRef.current = null
+      }, 10000) // 10秒
       
       console.log('[删除节点] ✅ 操作成功完成')
       
@@ -210,6 +295,12 @@ function NodeManagement({ wallet, contracts }) {
         console.error('[删除节点] - 错误原因:', error.reason)
       }
       
+      // 清除交易信息和定时器
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current)
+        successTimerRef.current = null
+      }
+      setTxHash('')
       setMessage(`❌ 删除失败: ${error.message || '未知错误'}`)
     } finally {
       setLoading(false)
@@ -223,8 +314,60 @@ function NodeManagement({ wallet, contracts }) {
       <p className={styles.subtitle}>仅 Owner 可以添加/删除节点</p>
 
       {message && (
-        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success}>
-          {message}
+        <div className={message.includes('❌') || message.includes('⚠️') ? styles.error : styles.success} style={{ position: 'relative' }}>
+          {message === 'success' && txHash ? (
+            <div>
+              <button
+                onClick={handleCloseSuccess}
+                style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '1'}
+                onMouseLeave={(e) => e.target.style.opacity = '0.7'}
+                aria-label="关闭"
+              >
+                <AiOutlineClose size={18} />
+              </button>
+              <div style={{ marginBottom: '0.75rem', paddingRight: '2rem' }}>
+                ✅ <strong>操作成功！</strong>
+              </div>
+              <div style={{ fontSize: '0.9rem', paddingRight: '2rem' }}>
+                <strong>交易哈希：</strong>
+                <a
+                  href={`https://bscscan.com/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#1890ff',
+                    textDecoration: 'underline',
+                    fontFamily: 'monospace',
+                    wordBreak: 'break-all',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                  onMouseLeave={(e) => e.target.style.opacity = '1'}
+                >
+                  {txHash}
+                </a>
+                <span style={{ marginLeft: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+                  (点击查看)
+                </span>
+              </div>
+            </div>
+          ) : (
+            message
+          )}
         </div>
       )}
 
