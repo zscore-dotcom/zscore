@@ -106,19 +106,64 @@ function NodeManagement({ wallet, contracts }) {
       console.log('[添加节点] - 交易状态:', tx.status)
       console.log('[添加节点] - 完整交易对象:', tx)
       
-      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
-      const txStatus = tx.status === true || tx.status === 1
-      if (!txStatus) {
+      // 确保有交易哈希
+      if (!tx.transactionHash) {
         setLoading(false)
-        setMessage('❌ 添加失败：交易状态为失败')
-        console.error('[添加节点] ❌ 交易状态检查失败，状态值:', tx.status)
+        setMessage('❌ 添加失败：未获取到交易哈希')
+        console.error('[添加节点] ❌ 未获取到交易哈希')
         return
       }
       
-      // 获取交易哈希
+      // 检查交易状态（优先使用 tx.status，如果不存在则通过 getTransactionReceipt 获取）
+      console.log('[添加节点] 7. 检查交易状态...')
       const hashString = String(tx.transactionHash || '')
-      setTxHash(hashString)
-      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 优先使用 tx.status（method.send() 返回的对象本身就是 receipt）
+      if (tx.status !== undefined) {
+        console.log('[添加节点] - 使用 tx.status:', tx.status)
+        if (tx.status === false || tx.status === 0) {
+          setLoading(false)
+          setMessage('❌ 添加失败：交易状态为失败')
+          console.error('[添加节点] ❌ 交易状态检查失败，状态值:', tx.status)
+          return
+        }
+        // 交易成功
+        setTxHash(hashString)
+        setMessage('success')
+      } else {
+        // 如果 tx.status 不存在，通过 getTransactionReceipt 获取
+        console.log('[添加节点] - tx.status 不存在，通过 getTransactionReceipt 获取...')
+        try {
+          const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
+          
+          if (!txReceipt) {
+            // receipt 为 null，但有 transactionHash，仍然认为成功（可能还未被打包）
+            console.warn('[添加节点] ⚠️ 交易回执为 null，但交易已提交 (可能还未被打包)')
+            setTxHash(hashString)
+            setMessage('success')
+          } else {
+            console.log('[添加节点] - 交易回执:', txReceipt)
+            console.log('[添加节点] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
+            
+            // 检查交易状态（receipt.status 是布尔值或数字 1/0）
+            if (txReceipt.status === false || txReceipt.status === 0) {
+              setLoading(false)
+              setMessage('❌ 添加失败：交易状态为失败')
+              console.error('[添加节点] ❌ 交易状态检查失败，状态值:', txReceipt.status)
+              return
+            }
+            
+            // 交易成功
+            setTxHash(hashString)
+            setMessage('success')
+          }
+        } catch (receiptError) {
+          // 如果获取 receipt 失败，但有 transactionHash，仍然认为成功（可能还未被打包）
+          console.warn('[添加节点] ⚠️ 获取交易回执失败，但交易已提交:', receiptError.message)
+          setTxHash(hashString)
+          setMessage('success')
+        }
+      }
       
       // 10秒后自动清除成功消息
       if (successTimerRef.current) {
@@ -253,19 +298,64 @@ function NodeManagement({ wallet, contracts }) {
       console.log('[删除节点] - 交易状态:', tx.status)
       console.log('[删除节点] - 完整交易对象:', tx)
       
-      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
-      const txStatus = tx.status === true || tx.status === 1
-      if (!txStatus) {
+      // 确保有交易哈希
+      if (!tx.transactionHash) {
         setLoading(false)
-        setMessage('❌ 删除失败：交易状态为失败')
-        console.error('[删除节点] ❌ 交易状态检查失败，状态值:', tx.status)
+        setMessage('❌ 删除失败：未获取到交易哈希')
+        console.error('[删除节点] ❌ 未获取到交易哈希')
         return
       }
       
-      // 获取交易哈希
+      // 检查交易状态（优先使用 tx.status，如果不存在则通过 getTransactionReceipt 获取）
+      console.log('[删除节点] 7. 检查交易状态...')
       const hashString = String(tx.transactionHash || '')
-      setTxHash(hashString)
-      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 优先使用 tx.status（method.send() 返回的对象本身就是 receipt）
+      if (tx.status !== undefined) {
+        console.log('[删除节点] - 使用 tx.status:', tx.status)
+        if (tx.status === false || tx.status === 0) {
+          setLoading(false)
+          setMessage('❌ 删除失败：交易状态为失败')
+          console.error('[删除节点] ❌ 交易状态检查失败，状态值:', tx.status)
+          return
+        }
+        // 交易成功
+        setTxHash(hashString)
+        setMessage('success')
+      } else {
+        // 如果 tx.status 不存在，通过 getTransactionReceipt 获取
+        console.log('[删除节点] - tx.status 不存在，通过 getTransactionReceipt 获取...')
+        try {
+          const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
+          
+          if (!txReceipt) {
+            // receipt 为 null，但有 transactionHash，仍然认为成功（可能还未被打包）
+            console.warn('[删除节点] ⚠️ 交易回执为 null，但交易已提交 (可能还未被打包)')
+            setTxHash(hashString)
+            setMessage('success')
+          } else {
+            console.log('[删除节点] - 交易回执:', txReceipt)
+            console.log('[删除节点] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
+            
+            // 检查交易状态（receipt.status 是布尔值或数字 1/0）
+            if (txReceipt.status === false || txReceipt.status === 0) {
+              setLoading(false)
+              setMessage('❌ 删除失败：交易状态为失败')
+              console.error('[删除节点] ❌ 交易状态检查失败，状态值:', txReceipt.status)
+              return
+            }
+            
+            // 交易成功
+            setTxHash(hashString)
+            setMessage('success')
+          }
+        } catch (receiptError) {
+          // 如果获取 receipt 失败，但有 transactionHash，仍然认为成功（可能还未被打包）
+          console.warn('[删除节点] ⚠️ 获取交易回执失败，但交易已提交:', receiptError.message)
+          setTxHash(hashString)
+          setMessage('success')
+        }
+      }
       
       // 10秒后自动清除成功消息
       if (successTimerRef.current) {

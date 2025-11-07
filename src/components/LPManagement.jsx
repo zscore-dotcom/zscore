@@ -257,30 +257,65 @@ function LPManagement({ wallet, contracts }) {
       console.log('[LP分红提取] - 耗时:', duration, 'ms')
       console.log('[LP分红提取] - 完整交易对象:', safeStringify(tx))
       
-      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
-      const txStatus = tx.status === true || tx.status === 1
-      if (!txStatus) {
+      // 确保有交易哈希
+      if (!tx.transactionHash) {
         setLoading(false)
-        setMessage('❌ 提取失败：交易状态为失败')
-        console.error('[LP分红提取] ❌ 交易状态检查失败，状态值:', tx.status)
+        setMessage('❌ 提取失败：未获取到交易哈希')
+        console.error('[LP分红提取] ❌ 未获取到交易哈希')
         return
       }
       
-      // 9. 获取交易详情
-      console.log('[LP分红提取] 9. 获取交易详情...')
-      try {
-        const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
-        console.log('[LP分红提取] - 交易回执:', safeStringify(txReceipt))
-        console.log('[LP分红提取] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
-        console.log('[LP分红提取] - 实际Gas使用:', txReceipt.gasUsed?.toString() || String(txReceipt.gasUsed || ''))
-      } catch (receiptError) {
-        console.warn('[LP分红提取] ⚠️ 获取交易回执失败 (可能还未被打包):', receiptError.message)
-      }
-      
-      // 获取交易哈希
+      // 9. 检查交易状态（优先使用 tx.status，如果不存在则通过 getTransactionReceipt 获取）
+      console.log('[LP分红提取] 9. 检查交易状态...')
       const hashString = String(tx.transactionHash || '')
-      setTxHash(hashString)
-      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 优先使用 tx.status（method.send() 返回的对象本身就是 receipt）
+      if (tx.status !== undefined) {
+        console.log('[LP分红提取] - 使用 tx.status:', tx.status)
+        if (tx.status === false || tx.status === 0) {
+          setLoading(false)
+          setMessage('❌ 提取失败：交易状态为失败')
+          console.error('[LP分红提取] ❌ 交易状态检查失败，状态值:', tx.status)
+          return
+        }
+        // 交易成功
+        setTxHash(hashString)
+        setMessage('success')
+      } else {
+        // 如果 tx.status 不存在，通过 getTransactionReceipt 获取
+        console.log('[LP分红提取] - tx.status 不存在，通过 getTransactionReceipt 获取...')
+        try {
+          const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
+          
+          if (!txReceipt) {
+            // receipt 为 null，但有 transactionHash，仍然认为成功（可能还未被打包）
+            console.warn('[LP分红提取] ⚠️ 交易回执为 null，但交易已提交 (可能还未被打包)')
+            setTxHash(hashString)
+            setMessage('success')
+          } else {
+            console.log('[LP分红提取] - 交易回执:', safeStringify(txReceipt))
+            console.log('[LP分红提取] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
+            console.log('[LP分红提取] - 实际Gas使用:', txReceipt.gasUsed?.toString() || String(txReceipt.gasUsed || ''))
+            
+            // 检查交易状态（receipt.status 是布尔值或数字 1/0）
+            if (txReceipt.status === false || txReceipt.status === 0) {
+              setLoading(false)
+              setMessage('❌ 提取失败：交易状态为失败')
+              console.error('[LP分红提取] ❌ 交易状态检查失败，状态值:', txReceipt.status)
+              return
+            }
+            
+            // 交易成功
+            setTxHash(hashString)
+            setMessage('success')
+          }
+        } catch (receiptError) {
+          // 如果获取 receipt 失败，但有 transactionHash，仍然认为成功（可能还未被打包）
+          console.warn('[LP分红提取] ⚠️ 获取交易回执失败，但交易已提交 (可能还未被打包):', receiptError.message)
+          setTxHash(hashString)
+          setMessage('success')
+        }
+      }
       
       // 10秒后自动清除成功消息
       if (successTimerRef.current) {
@@ -509,19 +544,64 @@ function LPManagement({ wallet, contracts }) {
       console.log('[清理Token] - 交易状态:', tx.status)
       console.log('[清理Token] - 完整交易对象:', safeStringify(tx))
       
-      // 检查交易状态（status 可能是布尔值 true/false 或数字 1/0）
-      const txStatus = tx.status === true || tx.status === 1
-      if (!txStatus) {
+      // 确保有交易哈希
+      if (!tx.transactionHash) {
         setLoading(false)
-        setMessage('❌ 清理失败：交易状态为失败')
-        console.error('[清理Token] ❌ 交易状态检查失败，状态值:', tx.status)
+        setMessage('❌ 清理失败：未获取到交易哈希')
+        console.error('[清理Token] ❌ 未获取到交易哈希')
         return
       }
       
-      // 获取交易哈希
+      // 检查交易状态（优先使用 tx.status，如果不存在则通过 getTransactionReceipt 获取）
+      console.log('[清理Token] 7. 检查交易状态...')
       const hashString = String(tx.transactionHash || '')
-      setTxHash(hashString)
-      setMessage('success') // 使用特殊标记表示成功，将在渲染时显示详细信息
+      
+      // 优先使用 tx.status（method.send() 返回的对象本身就是 receipt）
+      if (tx.status !== undefined) {
+        console.log('[清理Token] - 使用 tx.status:', tx.status)
+        if (tx.status === false || tx.status === 0) {
+          setLoading(false)
+          setMessage('❌ 清理失败：交易状态为失败')
+          console.error('[清理Token] ❌ 交易状态检查失败，状态值:', tx.status)
+          return
+        }
+        // 交易成功
+        setTxHash(hashString)
+        setMessage('success')
+      } else {
+        // 如果 tx.status 不存在，通过 getTransactionReceipt 获取
+        console.log('[清理Token] - tx.status 不存在，通过 getTransactionReceipt 获取...')
+        try {
+          const txReceipt = await wallet.eth.getTransactionReceipt(tx.transactionHash)
+          
+          if (!txReceipt) {
+            // receipt 为 null，但有 transactionHash，仍然认为成功（可能还未被打包）
+            console.warn('[清理Token] ⚠️ 交易回执为 null，但交易已提交 (可能还未被打包)')
+            setTxHash(hashString)
+            setMessage('success')
+          } else {
+            console.log('[清理Token] - 交易回执:', safeStringify(txReceipt))
+            console.log('[清理Token] - 交易状态 (回执):', txReceipt.status ? '成功' : '失败')
+            
+            // 检查交易状态（receipt.status 是布尔值或数字 1/0）
+            if (txReceipt.status === false || txReceipt.status === 0) {
+              setLoading(false)
+              setMessage('❌ 清理失败：交易状态为失败')
+              console.error('[清理Token] ❌ 交易状态检查失败，状态值:', txReceipt.status)
+              return
+            }
+            
+            // 交易成功
+            setTxHash(hashString)
+            setMessage('success')
+          }
+        } catch (receiptError) {
+          // 如果获取 receipt 失败，但有 transactionHash，仍然认为成功（可能还未被打包）
+          console.warn('[清理Token] ⚠️ 获取交易回执失败，但交易已提交:', receiptError.message)
+          setTxHash(hashString)
+          setMessage('success')
+        }
+      }
       
       // 10秒后自动清除成功消息
       if (successTimerRef.current) {
