@@ -2,6 +2,7 @@ import Web3 from 'web3'
 import ZSCoreABI from '../../abi/ZSCore.json'
 import ZSSharePoolABI from '../../abi/ZSSharePool.json'
 import ZSRelayVaultABI from '../../abi/ZSRelayVault.json'
+import HelperABI from '../../abi/Helper.json'
 import ERC20ABI from '../../abi/ERC20.json'
 import ADDRESSES from '../../abi/adress.json'
 
@@ -22,6 +23,7 @@ const contracts = {
       zsCore: new web3.eth.Contract(ZSCoreABI.abi, addresses.ZSCore),
       zsSharePool: new web3.eth.Contract(ZSSharePoolABI.abi, addresses.ZSSharePool),
       zsRelayVault: new web3.eth.Contract(ZSRelayVaultABI.abi, addresses.ZSRelayVault),
+      helper: addresses.Helper ? new web3.eth.Contract(HelperABI.abi, addresses.Helper) : null,
       wbnb: new web3.eth.Contract(ERC20ABI.abi, addresses.WBNB),
       usdt: new web3.eth.Contract(ERC20ABI.abi, addresses.USDT),
       addresses

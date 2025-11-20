@@ -80,7 +80,7 @@ function Distribute({ wallet, contracts }) {
     console.log('=== [Token分发] 开始执行 ===')
     console.log('[Token分发] 1. 检查前置条件...')
     
-    if (!contracts || !wallet || !account) {
+    if (!contracts || !wallet || !account || !contracts.helper) {
       console.error('[Token分发] ❌ 前置条件检查失败: 合约、钱包或账户未就绪')
       console.log('[Token分发] - contracts:', !!contracts)
       console.log('[Token分发] - wallet:', !!wallet)
@@ -205,7 +205,7 @@ function Distribute({ wallet, contracts }) {
 
     try {
       console.log('[Token分发] 7. 构建交易方法...')
-      const method = contracts.zsCore.methods.distribute(sizeNum, bigIndexNum, countNum)
+      const method = contracts.helper.methods.distribute(sizeNum, bigIndexNum, countNum)
       console.log('[Token分发] - 方法已构建:', method)
       
       console.log('[Token分发] 8. 发送交易到区块链...')
